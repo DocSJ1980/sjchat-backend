@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser"
 import cors from "cors"
 import chatRouter from "./routes/chatRoutes.js"
 import messageRouter from "./routes/messageRoutes.js"
+import userRouter from "./routes/userRoutes.js"
 
 //. Declaring Path for dotenv
 config({
@@ -29,6 +30,7 @@ app.use(cookieParser())
 //. Using routes
 app.use("/api/chat", chatRouter)
 app.use("/api/message", messageRouter)
+app.use("/api/user", userRouter)
 
 //. Connecting Database
 connectDB(URI)
