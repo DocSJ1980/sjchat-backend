@@ -22,7 +22,9 @@ const sendEmail = async (email, subject, text) => {
     },
         function (err, info) {
             if (err) {
-                return next(new ErrorResponse("Email could not be sent", 404));
+                return res
+                    .status(400)
+                    .json({ success: false, message: "Email could not be sent" });
             }
             else {
                 console.log(info.messageId)

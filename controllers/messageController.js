@@ -1,10 +1,12 @@
 import MessageModel from "../models/messageModel.js";
 
 export const addMessage = async (req, res) => {
+    // console.log(req.body)
+    const { chatId, senderId, text } = req.body
     const message = await MessageModel.create({
-        senderId: req.body.senderId,
-        receiverId: req.body.receiverId,
-        text: req.body.text
+        chatId,
+        senderId,
+        text
     });
     try {
         const result = await message.save();

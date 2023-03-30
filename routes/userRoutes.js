@@ -21,7 +21,5 @@ router.get("/me", isAuthenticated, getMyProfile);
 router.post("/updateprofile", isAuthenticated, updateProfile);
 router.post("/updatepassword", isAuthenticated, updatePassword);
 
-
-
 // Export (default)
 export default router

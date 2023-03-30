@@ -16,7 +16,9 @@ export const newUser = async (req, res, next) => {
     let foundUser = await User.findOne({ email });
     // console.log("FoundUser: ", foundUser, "name: ", name)
     if (foundUser) {
-        return next(new ErrorResponse("User already exisits", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "User already exisits" });
     }
     const randomOtp = crypto.randomBytes(20).toString("hex")
     const otp = crypto
@@ -53,7 +55,9 @@ export const newUser = async (req, res, next) => {
         )
     } catch (error) {
         console.log(error)
-        next(new ErrorResponse("Sorry account could not be created.", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Sorry account could not be created." })
     }
 };
 
@@ -77,7 +81,9 @@ export const verify = async (req, res, next) => {
 
         sendToken(res, foundUser, 200, "Account Verified");
     } catch (error) {
-        next(new ErrorResponse("Sorry e-mail not verified", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Sorry e-mail not verified" })
     }
 };
 
@@ -87,25 +93,33 @@ export const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return next(new ErrorResponse("Please provide an email and password", 400));
+        return res
+            .status(400)
+            .json({ success: false, message: "Please provide an email and password" });
     };
 
     try {
         const foundUser = await User.findOne({ email }).select("+password");
         if (!foundUser) {
-            return next(new ErrorResponse("Invalid credentials", 401));
+            return res
+                .status(400)
+                .json({ success: false, message: "Invalid credentials" });
         };
 
         const isMatch = await foundUser.comparePassword(password);
 
         if (!isMatch) {
-            return next(new ErrorResponse("Invalid credentials", 404));
+            return res
+                .status(400)
+                .json({ success: false, message: "Invalid credentials" });
         }
 
         sendToken(res, foundUser, 200, "Login Successful");
 
     } catch (error) {
-        return next(new ErrorResponse("Login attemp un-successful", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Login attemp un-successful" })
     }
 };
 
@@ -116,7 +130,9 @@ export const forgotPassword = async (req, res, next) => {
     try {
         const foundUser = await User.findOne({ email });
         if (!foundUser) {
-            return next(new ErrorResponse("Email could not be found", 404))
+            return res
+                .status(400)
+                .json({ success: false, message: "Email could not be found" })
         }
 
         await foundUser.getResetPasswordToken()
@@ -139,10 +155,14 @@ export const forgotPassword = async (req, res, next) => {
             foundUser.resetPasswordOtp = undefined;
             foundUser.resetPasswordOtpExpiry = undefined;
             await foundUser.save();
-            return next(new ErrorResponse("Email Could not be sent", 400))
+            return res
+                .status(400)
+                .json({ success: false, message: "Email Could not be sent" })
         }
     } catch (error) {
-        next(new ErrorResponse("Email not found", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Email not found" })
     }
 }
 
@@ -153,9 +173,9 @@ export const resetPassword = async (req, res, next) => {
 
         const foundUser = await User.findOne({
             resetPasswordOtp: resetOtp,
-            resetPasswordExpiry: { $gt: Date.now() },
+            resetPasswordOtpExpiry: { $gt: new Date(Date.now()).toISOString() },
         });
-
+        console.log(new Date(Date.now()).toISOString())
         if (!foundUser) {
             return res
                 .status(400)
@@ -170,7 +190,9 @@ export const resetPassword = async (req, res, next) => {
             .status(200)
             .json({ success: true, message: `Password Changed Successfully` });
     } catch (error) {
-        next(new ErrorResponse("Email not found", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Internal sjServer Error" })
     }
 };
 
@@ -182,7 +204,9 @@ export const logout = async (req, res, next) => {
             .clearCookie("refreshToken")
             .json({ success: true, message: "Logged out successfully" });
     } catch (error) {
-        next(new ErrorResponse("Failed to logout", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Failed to logout" })
 
     }
 };
@@ -194,7 +218,9 @@ export const getMyProfile = async (req, res, next) => {
 
         sendToken(res, foundUser, 201, `Welcome back ${foundUser.name}`);
     } catch (error) {
-        next(new ErrorResponse("Failed to load profile", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Failed to load profile" })
     }
 };
 
@@ -264,6 +290,8 @@ export default async (req, res, next) => {
             .status(200)
             .json({ success: true, message: "Password Updated successfully" })
     } catch (error) {
-        next(new ErrorResponse("Failed to update password", 400))
+        return res
+            .status(400)
+            .json({ success: false, message: "Failed to update password" })
     }
 }
