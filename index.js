@@ -28,6 +28,9 @@ app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 
 //. Using routes
+app.get("/", (req, res) => {
+    res.send("<h1>App Working fine</h1>")
+})
 app.use("/api/chat", chatRouter)
 app.use("/api/message", messageRouter)
 app.use("/api/user", userRouter)
