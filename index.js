@@ -21,7 +21,7 @@ const URI = process.env.URI
 //. Middlewares
 app.use(cors({
     credentials: true,
-    origin: true
+    origin: ["http://localhost:5173"]
 }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
