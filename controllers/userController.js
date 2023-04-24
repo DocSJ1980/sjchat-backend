@@ -295,3 +295,19 @@ export default async (req, res, next) => {
             .json({ success: false, message: "Failed to update password" })
     }
 }
+
+//. SEVENTH ROUTE: Get profile controller
+export const userDetail = async (req, res, next) => {
+    try {
+        const foundUser = await User.findById(req.body.userId);
+
+        return res
+            .status(200)
+            .json({ success: true, foundUser })
+
+    } catch (error) {
+        return res
+            .status(400)
+            .json({ success: false, message: "Failed to load profile" })
+    }
+};
