@@ -18,7 +18,7 @@ router.post("/restpassword", resetPassword)
 // Protected user routes
 router.post("/verify", isAuthenticated, verify);
 router.get("/me", isAuthenticated, getMyProfile);
-router.get("/userdetail", isAuthenticated, userDetail);
+router.post("/userdetail", isAuthenticated, userDetail);
 router.post("/updateprofile", isAuthenticated, updateProfile);
 router.post("/updatepassword", isAuthenticated, updatePassword);
 
