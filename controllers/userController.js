@@ -4,61 +4,111 @@ import User from "../models/userModel.js"
 import crypto from 'crypto'
 import sendEmail from "../utils/sendEmail.js"
 import { sendToken } from "../utils/sendToken.js"
-// import fs from 'fs'
-// import path from 'path'
+import { v2 as cloudinary } from 'cloudinary';
+import multer from "multer"
+import fs from 'fs'
+import path from 'path'
 // import csv from 'fast-csv'
 // import DengueTeam from "../models/dengueTeamModel.js"
 
 
 //. FIRST ROUTE:  New User Registration controller
-export const newUser = async (req, res, next) => {
-    const { name, email, password, gender } = req.body
-    let foundUser = await User.findOne({ email });
-    // console.log("FoundUser: ", foundUser, "name: ", name)
-    if (foundUser) {
-        return res
-            .status(400)
-            .json({ success: false, message: "User already exisits" });
-    }
-    const randomOtp = crypto.randomBytes(20).toString("hex")
-    const otp = crypto
-        .createHash("sha256")
-        .update(randomOtp)
-        .digest("hex")
-    // console.log("OTP: ", otp)
-    try {
-        // const { avatar } = req.files;
-        foundUser = new User({
-            name,
-            email,
-            password,
-            gender,
-            avatar: {
-                public_id: "",
-                url: ""
-            },
-            otp,
-            otp_expiry: Date.now() + process.env.OTP_EXPIRE * 60 * 60 * 1000
-        });
-        await foundUser.save();
-        // console.log(foundUser)
-        const message = `Your OTP is ${otp}`
-        await sendEmail(
-            email, "Verify Your Accout", message
-        )
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, path.resolve("uploads"));
+    },
+    filename: function (req, file, cb) {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
+});
 
-        await sendToken(
-            res,
-            foundUser,
-            201,
-            "OTP sent to your email, please verify your account"
-        )
-    } catch (error) {
-        console.log(error)
-        return res
-            .status(400)
-            .json({ success: false, message: "Sorry account could not be created." })
-    }
+const upload = multer({ storage: storage });
+
+export const newUser = async (req, res, next) => {
+    upload.single("profile_image")(req, res, async function (err) {
+        if (err instanceof multer.MulterError) {
+            // Handle Multer errors
+            return res
+                .status(400)
+                .json({ success: false, message: err.message });
+        } else if (err) {
+            // Handle other errors
+            return res
+                .status(400)
+                .json({ success: false, message: err.message });
+        }
+
+        const { name, email, password, gender } = req.body;
+        const file = req.file;
+
+        let foundUser = await User.findOne({ email });
+        if (foundUser) {
+            return res
+                .status(400)
+                .json({ success: false, message: "User already exists" });
+        }
+
+        const randomOtp = crypto.randomBytes(20).toString("hex");
+        const otp = crypto.createHash("sha256").update(randomOtp).digest("hex");
+
+        cloudinary.config({
+            cloud_name: "dsxedpy6g",
+            api_key: "499585561352646",
+            api_secret: "ZISXzk7gzHIzFrJs3qqhYiGFdpc",
+        });
+        const filePath = file.path;
+
+        try {
+            const uploadResult = await cloudinary.uploader.upload(filePath, {
+                public_id: name,
+            });
+
+            const avatar = {
+                public_id: uploadResult.public_id,
+                url: uploadResult.secure_url,
+            };
+
+            // Delete the local file
+            fs.unlinkSync(filePath);
+
+            foundUser = new User({
+                name,
+                email,
+                password,
+                gender,
+                avatar,
+                otp,
+                otp_expiry: Date.now() + process.env.OTP_EXPIRE * 60 * 60 * 1000,
+            });
+
+            await foundUser.save();
+
+            const message = `Your OTP is ${otp}`;
+            await sendEmail(email, "Verify Your Account", message);
+
+            await sendToken(
+                res,
+                foundUser,
+                201,
+                "OTP sent to your email, please verify your account"
+            );
+        } catch (error) {
+            console.log(error);
+            // Delete the user if it was created
+            if (foundUser) {
+                await User.findByIdAndDelete(foundUser._id);
+            }
+            // Delete the image if it was uploaded
+            if (filePath) {
+                await cloudinary.uploader.destroy(name);
+                fs.unlinkSync(filePath);
+            }
+            return res.status(400).json({
+                success: false,
+                message: "Sorry, account could not be created.",
+            });
+        }
+    });
 };
 
 //. SECOND ROUTE: Email Verification controller

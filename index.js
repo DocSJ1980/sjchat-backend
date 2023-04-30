@@ -48,7 +48,8 @@ connectDB(URI)
 const http = createServer(app)
 const io = new Server(http, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: "*",
+        // origin: "http://localhost:5173",
     },
 })
 
@@ -85,6 +86,7 @@ io.on("connection", (socket) => {
         }
     });
 });
+
 
 
 //. Running http server
