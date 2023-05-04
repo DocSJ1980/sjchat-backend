@@ -15,7 +15,7 @@ import path from 'path'
 //. FIRST ROUTE:  New User Registration controller
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, path.resolve("uploads"));
+        cb(null, path.resolve("tmp"));
     },
     filename: function (req, file, cb) {
         cb(null, `${Date.now()}-${file.originalname}`);
@@ -41,12 +41,6 @@ export const newUser = async (req, res, next) => {
         const { name, email, password, gender } = req.body;
         const file = req.file;
 
-        let foundUser = await User.findOne({ email });
-        if (foundUser) {
-            return res
-                .status(400)
-                .json({ success: false, message: "User already exists" });
-        }
 
         const randomOtp = crypto.randomBytes(20).toString("hex");
         const otp = crypto.createHash("sha256").update(randomOtp).digest("hex");
@@ -57,6 +51,15 @@ export const newUser = async (req, res, next) => {
             api_secret: "ZISXzk7gzHIzFrJs3qqhYiGFdpc",
         });
         const filePath = file.path;
+        let foundUser = await User.findOne({ email });
+        if (foundUser) {
+            if (filePath) {
+                fs.unlinkSync(filePath);
+            }
+            return res
+                .status(400)
+                .json({ success: false, message: "User already exists" });
+        }
 
         try {
             const uploadResult = await cloudinary.uploader.upload(filePath, {
@@ -69,7 +72,6 @@ export const newUser = async (req, res, next) => {
             };
 
             // Delete the local file
-            fs.unlinkSync(filePath);
 
             foundUser = new User({
                 name,
@@ -92,8 +94,9 @@ export const newUser = async (req, res, next) => {
                 201,
                 "OTP sent to your email, please verify your account"
             );
+            fs.unlinkSync(filePath);
         } catch (error) {
-            console.log(error);
+            console.log("Final Catch error: ", error.message);
             // Delete the user if it was created
             if (foundUser) {
                 await User.findByIdAndDelete(foundUser._id);
@@ -103,6 +106,7 @@ export const newUser = async (req, res, next) => {
                 await cloudinary.uploader.destroy(name);
                 fs.unlinkSync(filePath);
             }
+
             return res.status(400).json({
                 success: false,
                 message: "Sorry, account could not be created.",

@@ -14,23 +14,19 @@ const sendEmail = async (email, subject, text) => {
     });
 
     // Send email
-    await transport.sendMail({
-        from: process.env.SMTP_USER,
-        to: email,
-        subject,
-        text,
-    },
-        function (err, info) {
-            if (err) {
-                return res
-                    .status(400)
-                    .json({ success: false, message: "Email could not be sent" });
-            }
-            else {
-                console.log(info.messageId)
-            }
-        }
-    );
+    try {
+        // Send email
+        const info = await transport.sendMail({
+            from: process.env.SMTP_USER,
+            to: email,
+            subject,
+            text,
+        });
+
+        console.log(info.messageId);
+    } catch (error) {
+        throw new Error("Email could not be sent");
+    }
 };
 
 export default sendEmail;
