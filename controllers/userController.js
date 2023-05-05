@@ -71,7 +71,6 @@ export const newUser = async (req, res, next) => {
                 url: uploadResult.secure_url,
             };
 
-            // Delete the local file
 
             foundUser = new User({
                 name,
@@ -82,7 +81,7 @@ export const newUser = async (req, res, next) => {
                 otp,
                 otp_expiry: Date.now() + process.env.OTP_EXPIRE * 60 * 60 * 1000,
             });
-
+            console.log('%cuserController.js line:84 foundUser.otp_expiry', 'color: white; background-color: #007acc;', foundUser.otp_expiry);
             await foundUser.save();
 
             const message = `Your OTP is ${otp}`;
@@ -94,6 +93,7 @@ export const newUser = async (req, res, next) => {
                 201,
                 "OTP sent to your email, please verify your account"
             );
+            // Delete the local file
             fs.unlinkSync(filePath);
         } catch (error) {
             console.log("Final Catch error: ", error.message);
@@ -365,3 +365,44 @@ export const userDetail = async (req, res, next) => {
             .json({ success: false, message: "Failed to load profile" })
     }
 };
+
+export const userSearch = async (req, res, next) => {
+    try {
+        const { searchTerm } = req.body;
+        const regex = new RegExp(searchTerm, 'i');
+
+        const foundUsers = await User.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { email: { $regex: regex } },
+                        { name: { $regex: regex } }
+                    ]
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    email: 1,
+                    name: 1,
+                    avatar: 1,
+                    score: {
+                        $sum: [
+                            { $cond: [{ $regexMatch: { input: '$email', regex } }, 1, 0] },
+                            { $cond: [{ $regexMatch: { input: '$name', regex } }, 1, 0] }
+                        ]
+                    }
+                }
+            },
+            {
+                $sort: { score: -1 }
+            }
+        ]);
+
+        return res.status(200).json({ success: true, foundUsers });
+    } catch (error) {
+        console.log(error);
+        return res.status(400).json({ success: false, message: "Server Error" });
+    }
+};
+
