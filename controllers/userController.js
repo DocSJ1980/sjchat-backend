@@ -39,78 +39,110 @@ export const newUser = async (req, res, next) => {
         }
 
         const { name, email, password, gender } = req.body;
-        const file = req.file;
 
 
         const randomOtp = crypto.randomBytes(20).toString("hex");
         const otp = crypto.createHash("sha256").update(randomOtp).digest("hex");
 
-        cloudinary.config({
-            cloud_name: "dsxedpy6g",
-            api_key: "499585561352646",
-            api_secret: "ZISXzk7gzHIzFrJs3qqhYiGFdpc",
-        });
-        const filePath = file.path;
         let foundUser = await User.findOne({ email });
         if (foundUser) {
-            if (filePath) {
-                fs.unlinkSync(filePath);
-            }
             return res
                 .status(400)
                 .json({ success: false, message: "User already exists" });
         }
-
-        try {
-            const uploadResult = await cloudinary.uploader.upload(filePath, {
-                public_id: name,
+        if (req?.file) {
+            const file = req.file;
+            cloudinary.config({
+                cloud_name: "dsxedpy6g",
+                api_key: "499585561352646",
+                api_secret: "ZISXzk7gzHIzFrJs3qqhYiGFdpc",
             });
+            const filePath = file.path;
+            try {
+                const uploadResult = await cloudinary.uploader.upload(filePath, {
+                    public_id: name,
+                });
 
-            const avatar = {
-                public_id: uploadResult.public_id,
-                url: uploadResult.secure_url,
-            };
+                const avatar = {
+                    public_id: uploadResult.public_id,
+                    url: uploadResult.secure_url,
+                };
 
 
-            foundUser = new User({
-                name,
-                email,
-                password,
-                gender,
-                avatar,
-                otp,
-                otp_expiry: Date.now() + process.env.OTP_EXPIRE * 60 * 60 * 1000,
-            });
-            console.log('%cuserController.js line:84 foundUser.otp_expiry', 'color: white; background-color: #007acc;', foundUser.otp_expiry);
-            await foundUser.save();
+                foundUser = new User({
+                    name,
+                    email,
+                    password,
+                    gender,
+                    avatar,
+                    otp,
+                    otp_expiry: Date.now() + process.env.OTP_EXPIRE * 60 * 60 * 1000,
+                });
+                console.log('%cuserController.js line:84 foundUser.otp_expiry', 'color: white; background-color: #007acc;', foundUser.otp_expiry);
+                await foundUser.save();
 
-            const message = `Your OTP is ${otp}`;
-            await sendEmail(email, "Verify Your Account", message);
+                const message = `Your OTP is ${otp}`;
+                await sendEmail(email, "Verify Your Account", message);
 
-            await sendToken(
-                res,
-                foundUser,
-                201,
-                "OTP sent to your email, please verify your account"
-            );
-            // Delete the local file
-            fs.unlinkSync(filePath);
-        } catch (error) {
-            console.log("Final Catch error: ", error.message);
-            // Delete the user if it was created
-            if (foundUser) {
-                await User.findByIdAndDelete(foundUser._id);
-            }
-            // Delete the image if it was uploaded
-            if (filePath) {
-                await cloudinary.uploader.destroy(name);
+                await sendToken(
+                    res,
+                    foundUser,
+                    201,
+                    "OTP sent to your email, please verify your account"
+                );
+                // Delete the local file
                 fs.unlinkSync(filePath);
-            }
+            } catch (error) {
+                console.log("Final Catch error: ", error.message);
+                // Delete the user if it was created
+                if (foundUser) {
+                    await User.findByIdAndDelete(foundUser._id);
+                }
+                // Delete the image if it was uploaded
+                if (filePath) {
+                    await cloudinary.uploader.destroy(name);
+                    fs.unlinkSync(filePath);
+                }
 
-            return res.status(400).json({
-                success: false,
-                message: "Sorry, account could not be created.",
-            });
+                return res.status(400).json({
+                    success: false,
+                    message: "Sorry, account could not be created.",
+                });
+            }
+        } else {
+
+            try {
+                foundUser = new User({
+                    name,
+                    email,
+                    password,
+                    gender,
+                    otp,
+                    otp_expiry: Date.now() + process.env.OTP_EXPIRE * 60 * 60 * 1000,
+                });
+                console.log('%cuserController.js line:84 foundUser.otp_expiry.without avatar', 'color: white; background-color: #007acc;', foundUser.otp_expiry);
+                await foundUser.save();
+
+                const message = `Your OTP is ${otp}`;
+                await sendEmail(email, "Verify Your Account", message);
+
+                await sendToken(
+                    res,
+                    foundUser,
+                    201,
+                    "OTP sent to your email, please verify your account"
+                );
+            } catch (error) {
+                console.log("Final Catch error: ", error.message);
+                // Delete the user if it was created
+                if (foundUser) {
+                    await User.findByIdAndDelete(foundUser._id);
+                }
+                return res.status(400).json({
+                    success: false,
+                    message: "Sorry, account could not be created.",
+                });
+            }
         }
     });
 };
