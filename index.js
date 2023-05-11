@@ -29,19 +29,16 @@ app.use(cors({
 //     credentials: true,
 //     origin: ["https://sjchat.netlify.app"]
 // }))
+app.use(express.static('dist'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    next();
-});
 
 //. Using routes
-app.get("/", (req, res) => {
-    res.send("<h1>App Working fine</h1>")
-})
+// app.get("/", (req, res) => {
+//     res.send("<h1>App Working fine</h1>")
+// })
 app.use("/api/chat", chatRouter)
 app.use("/api/message", messageRouter)
 app.use("/api/user", userRouter)
@@ -51,10 +48,10 @@ connectDB(URI)
 
 const http = createServer(app)
 const io = new Server(http, {
+    path: '/api/socket.io/',
     cors: {
-        origin: "*",
-        // origin: "http://localhost:5173",
-    },
+        origin: "*"
+    }
 })
 
 let activeUsers = [];
