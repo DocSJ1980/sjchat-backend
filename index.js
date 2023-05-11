@@ -21,14 +21,14 @@ const port = process.env.PORT
 const URI = process.env.URI
 
 //. Middlewares
-// app.use(cors({
-//     credentials: true,
-//     origin: "*"
-// }))
 app.use(cors({
     credentials: true,
-    origin: ["https://sjchat.netlify.app"]
+    origin: "*"
 }))
+// app.use(cors({
+//     credentials: true,
+//     origin: ["https://sjchat.netlify.app"]
+// }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
