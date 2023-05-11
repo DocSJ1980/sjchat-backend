@@ -27,7 +27,7 @@ const URI = process.env.URI
 // }))
 app.use(cors({
     credentials: true,
-    origin: ["http://localhost:5173"]
+    origin: ["https://sjchat.netlify.app"]
 }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
