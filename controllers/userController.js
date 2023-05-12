@@ -15,7 +15,7 @@ import path from 'path'
 //. FIRST ROUTE:  New User Registration controller
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, path.resolve("tmp"));
+        cb(null, path.resolve("cloudinary_imgs"));
     },
     filename: function (req, file, cb) {
         cb(null, `${Date.now()}-${file.originalname}`);
