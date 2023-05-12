@@ -9,6 +9,7 @@ import messageRouter from "./routes/messageRoutes.js"
 import userRouter from "./routes/userRoutes.js"
 import { createServer } from "http"
 import { Server } from "socket.io";
+import path from "path";
 
 //. Declaring Path for dotenv
 config({
@@ -36,23 +37,14 @@ app.use(cookieParser())
 
 
 //. Using routes
-// app.get("/", (req, res) => {
-//     res.send("<h1>App Working fine</h1>")
-// })
 app.use("/api/chat", chatRouter)
 app.use("/api/message", messageRouter)
 app.use("/api/user", userRouter)
-
 //. Connecting Database
 connectDB(URI)
 
 const http = createServer(app)
-const io = new Server(http, {
-    path: '/api/socket.io/',
-    cors: {
-        origin: "*"
-    }
-})
+const io = new Server(http)
 
 let activeUsers = [];
 
@@ -76,6 +68,14 @@ io.on("connection", (socket) => {
         io.emit("get-users", activeUsers);
     });
 
+    socket.on("log-out", () => {
+        // remove user from active users
+        activeUsers = activeUsers.filter((user) => user.socketId !== socket.id);
+        console.log("User logged out", activeUsers);
+        // send all active users to all users
+        io.emit("get-users", activeUsers);
+    });
+
     // send message to a specific user
     socket.on("send-message", (data) => {
         const { receiverId } = data;
@@ -88,6 +88,9 @@ io.on("connection", (socket) => {
     });
 });
 
+app.get("*", (req, res) => {
+    res.redirect('/');
+});
 
 
 //. Running http server
